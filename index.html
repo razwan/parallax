@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<title>Document</title>
+</head>
+<body>
+
+<div class="hero full-height">
+	<div class="hero__background">
+		<img src="1.jpg" alt="">
+	</div>
+</div>
+<div class="content"></div>
+<div class="hero two-thirds-height">
+	<div class="hero__background">
+		<img src="2.jpg" alt="">
+	</div>
+</div>
+<div class="content"></div>
+<div class="hero half-height">
+	<div class="hero__background">
+		<img src="1.jpg" alt="">
+	</div>
+</div>
+<div class="content"></div>
+
+<div class="covers">
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.min.js"></script>
+<script src="https://npmcdn.com/imagesloaded@4.1/imagesloaded.pkgd.min.js"></script>
+<style>
+
+	* {
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		font: inherit;
+	}
+
+	.hero {
+		height: 100vh;
+	}
+
+	.two-thirds-height, .content {
+		height: calc(100vh * 2 / 3);
+	}
+
+	.half-height {
+		height: 50vh;
+	}
+
+	.hero__background {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		overflow: hidden;
+	}
+
+	.hero__background img {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+	}
+
+	.hero {
+		width: 100%;
+		background: black;
+		opacity: 0;
+		overflow: hidden;
+	}
+
+	.content {
+		background: white;
+		position: relative;
+		z-index: 10;
+	}
+
+	.covers .hero {
+		position: fixed;
+		opacity: 1;
+		/*z-index: -1;*/
+	}
+
+	.covers .hero__background {
+		overflow: visible;
+	}
+
+</style>
+<script>
+
+(function($) {
+
+	var latestKnownScrollY = window.pageYOffset,
+		windowHeight = $(window).height(),
+		windowWidth = $(window).width(),
+		newScrollY = latestKnownScrollY,
+		bleed = 20;
+
+	$(window).scroll(function() {
+	    newScrollY = window.pageYOffset;
+	});
+
+	function loop() {
+	    // Avoid calculations if not needed
+	    if (latestKnownScrollY !== newScrollY) {
+	        latestKnownScrollY = newScrollY
+	        Parallax.update();
+	    }
+	    requestAnimationFrame(loop);
+	}
+
+	var Parallax = (function() {
+		var $covers,
+			amount = 0.85;
+
+		function init() {
+	        // clean up
+	        $('.covers').empty();
+	        $covers = $();
+
+	        $('.hero').each(function (i, hero) {
+
+	        	var $hero 		= $(hero),
+	        		heroOffset 	= $hero.offset(),
+	        		heroHeight 	= $hero.height(),
+	        		$clone  	= $hero.clone(true),
+            		distance    = (windowHeight + heroHeight) * amount,
+	        		$target;
+
+	        	$target = $clone.children();
+
+	        	var $img = $target.find('img');
+
+	        	$img.imagesLoaded(function() {
+	        		scaleImage($img);
+	        	});
+
+	        	// moving covers with scroll usings js
+	        	// may cause a barely noticeble lag
+	        	// making the cover bigger should solve the problem
+	            $clone.css({
+	                top: heroOffset.top - bleed,
+	                height: heroHeight + bleed * 2
+	            });
+
+				$clone.data('parallax', {
+                    start:      heroOffset.top - windowHeight,
+                    end:        heroOffset.top + heroHeight,
+                    distance:   distance
+                });
+				$clone.appendTo('.covers');
+
+            	$covers = $covers.add($clone);
+
+	        });
+		}
+
+		function update() {
+			$covers.css('transform', 'translateY(' + -latestKnownScrollY + 'px) translateZ(0)');
+
+	        $covers.each(function (i, hero) {
+	            var $hero       = $(hero),
+	            	$target 	= $hero.children(),
+	                parallax    = $hero.data('parallax');
+
+	            if (parallax.start < latestKnownScrollY && parallax.end > latestKnownScrollY) {
+	                var progress = (latestKnownScrollY - parallax.start) / (parallax.end - parallax.start),
+	                    moveY = (progress - 0.5) * parallax.distance;
+
+	                $target.css('transform', 'translateY(' + moveY + 'px) translateZ(0)');
+	            }
+	        });
+		}
+
+		function scaleImage($image) {
+
+			if ( typeof $image == "undefined" || ! $image.length || ! $image.is('img') ) {
+				return;
+			}
+
+	        var imageWidth  = $image.width(),
+	            imageHeight = $image.height(),
+	            $hero       = $image.parent(),
+	            heroHeight  = $hero.outerHeight(),
+	            scaleX      = windowWidth / imageWidth;
+	            scaleY      = (heroHeight + (windowHeight - heroHeight) * amount) / imageHeight;
+	            scale       = Math.max(scaleX, scaleY);
+	            newWidth    = parseInt(imageWidth * scale),
+	            newHeight   = scale * imageHeight;
+
+	        $image.css({
+	            width: newWidth,
+	            left: (windowWidth - newWidth) / 2,
+	            top: (heroHeight - newHeight) / 2
+	        });
+		}
+
+		return {
+			init: init,
+			update: update
+		}
+	})();
+
+	$(window).on('load', function() {
+		Parallax.init();
+		loop();
+	});
+
+})(jQuery);
+
+
+</script>
+</body>
+</html>
